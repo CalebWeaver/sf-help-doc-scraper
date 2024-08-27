@@ -48,12 +48,13 @@ def clean_urls(url_list):
     print(f"Cleaned URLs: {len(cleaned_urls)} valid URLs found.")
     return cleaned_urls
 
-def extract_and_append_content(driver, url, soup_list):
-    soup = fetch_page(driver, url)
+def extract_and_append_content(driver, url):
+    page_content = fetch_page(driver, url)
+    soup = BeautifulSoup(page_content, 'html.parser')
     content_div = soup.find('div', id='content')
     if content_div:
-        soup_list.append(content_div)
         print("Content div found and saved.")
+        return content_div
     else:
         print("Content div not found.")
 
@@ -62,24 +63,24 @@ def sanitize_filename(name):
     return re.sub(r'[\/:*?"<>|]', '_', name)
 
 # Function to save the parsed soup to files
-def save_soups(soup_list, output_dir):
+def save_soup(soup, output_dir, index):
     os.makedirs(output_dir, exist_ok=True)
-    for i, soup in enumerate(soup_list):
-        # Extract the h1 tag content
-        h1_tag = soup.find('h1')
-        if h1_tag and h1_tag.text.strip():
-            title = h1_tag.text.strip()
-        else:
-            title = f'soup_{i + 1}'  # Fallback if no h1 is found
 
-        # Sanitize the title to make it a valid filename
-        filename = sanitize_filename(title) + '.html'
+    # Extract the h1 tag content
+    h1_tag = soup.find('h1')
+    if h1_tag and h1_tag.text.strip():
+        title = h1_tag.text.strip()
+    else:
+        title = f'soup_{index}'  # Fallback if no h1 is found
 
-        # Save the file
-        filepath = os.path.join(output_dir, filename)
-        with open(filepath, 'w', encoding='utf-8') as file:
-            file.write(str(soup))
-        print(f'Saved: {filepath}')
+    # Sanitize the title to make it a valid filename
+    filename = sanitize_filename(title) + '.html'
+
+    # Save the file
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, 'w', encoding='utf-8') as file:
+        file.write(str(soup))
+    print(f'Saved: {filepath}')
 
 def save_urls(url_list, output_file='urls.txt'):
     with open(output_file, 'w', encoding='utf-8') as file:
@@ -97,7 +98,7 @@ def load_urls_from_file(file_name='urls.txt'):
 def check_for_url_file(file_name='urls.txt'):
     return os.path.exists('urls.txt')
 
-def process_urls(driver, url_list, soup_list, start_index=0, end_index=None):
+def process_urls(driver, url_list, output_dir, start_index=0, end_index=None):
     # Adjust the end_index if it's not provided or out of bounds
     if end_index is None or end_index > len(url_list):
         end_index = len(url_list)
@@ -106,36 +107,31 @@ def process_urls(driver, url_list, soup_list, start_index=0, end_index=None):
     for i in range(start_index, end_index):
         url = url_list[i]
         print(f"Processing URL {i + 1}/{end_index} of {len(url_list)} total: {url}")
-        # Call your function here, e.g., fetch_page or any other processing function
-        extract_and_append_content(driver, url, soup_list)
+        contentSoup = extract_and_append_content(driver, url)
+
+        if contentSoup:
+            save_soup(contentSoup, output_dir, i)
 
 # Main function to control the flow of the script
 def main(url, output_dir='output-soups'):
     driver = setup_driver()
     pages = []
-    soup_list = []
     url_list = []
 
     try:
         if (not check_for_url_file()):
-          # Fetch the page and process it
-          page_content = fetch_page(driver, url)
-          pages.append(page_content)
+            # Fetch the page and process it
+            page_content = fetch_page(driver, url)
+            pages.append(page_content)
 
-          # Parse the page and extract URLs
-          soup = BeautifulSoup(page_content, 'html.parser')
-          soup_list.append(soup)
-          urls = extract_urls_from_toc(page_content)
-          urls = clean_urls(urls)
-          url_list.extend(urls)
+            urls = extract_urls_from_toc(page_content)
+            urls = clean_urls(urls)
+            url_list.extend(urls)
+            save_urls(url_list)
         else:
-          url_list = load_urls_from_file()
+            url_list = load_urls_from_file()
 
-        process_urls(driver, url_list, soup_list, 0, 1)
-
-        # Save the soups to files
-        save_urls(url_list)
-        save_soups(soup_list, output_dir)
+        process_urls(driver, url_list, output_dir, 2, 350)
 
     finally:
         driver.quit()  # Ensure the driver is closed properly
