@@ -4,6 +4,8 @@ import pandas as pd
 import time
 import os
 import re
+import shutil
+import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -15,16 +17,9 @@ def setup_driver(headless=True):
         chrome_options.add_argument('--headless')
     return webdriver.Chrome(options=chrome_options)
 
-# Function to fetch a page using Selenium and return its content
-def fetch_page(driver, url):
-    driver.get(url)
-    time.sleep(5)  # Wait for the page to load
-    return driver.page_source
-
 # Function to parse the page content and extract the Table of Contents URLs
-def extract_urls_from_toc(page_content):
-    soup = BeautifulSoup(page_content, 'html.parser')
-    toc = soup.find('div', class_='table-of-content')
+def extract_urls_from_toc(driver, url):
+    toc = load_page_with_retry(driver, url, 'class', 'table-of-content')
     if toc:
         urls = [a['href'] for a in toc.find_all('a', href=True)]
         print(f"Found {len(urls)} URLs in Table of Contents.")
@@ -48,15 +43,29 @@ def clean_urls(url_list):
     print(f"Cleaned URLs: {len(cleaned_urls)} valid URLs found.")
     return cleaned_urls
 
-def extract_and_append_content(driver, url):
-    page_content = fetch_page(driver, url)
-    soup = BeautifulSoup(page_content, 'html.parser')
-    content_div = soup.find('div', id='content')
-    if content_div:
-        print("Content div found and saved.")
-        return content_div
-    else:
-        print("Content div not found.")
+def check_for_element(driver, by, value):
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    search_kwargs = {by: value}
+    div = soup.find('div', **search_kwargs)
+    return div
+
+def load_page_with_retry(driver, url, by, value):
+    driver.get(url)
+    time.sleep(2)
+    checkCount = 0
+    content_div = None
+    while checkCount <= 4 and not content_div:
+        content_div = check_for_element(driver, by, value)
+        checkCount += 1
+
+        if content_div:
+            print(f"Div with {by} '{value}' found.")
+            return content_div
+        elif not content_div and checkCount <= 3:
+            print(f"Div with {by} '{value}' not found. Attempt {checkCount} of 3.")
+            time.sleep(1)
+        else:
+            print(f"Div with {by} '{value}' not found. Abandoned.")
 
 def sanitize_filename(name):
     # Remove or replace characters that are not allowed in filenames
@@ -107,38 +116,96 @@ def process_urls(driver, url_list, output_dir, start_index=0, end_index=None):
     for i in range(start_index, end_index):
         url = url_list[i]
         print(f"Processing URL {i + 1}/{end_index} of {len(url_list)} total: {url}")
-        contentSoup = extract_and_append_content(driver, url)
+
+        contentSoup = load_page_with_retry(driver, url, 'id', 'content')
 
         if contentSoup:
             save_soup(contentSoup, output_dir, i)
 
+        print()
+
+def concatenate_html_files(input_dir='output-soups', output_file='combined.html'):
+    # Define the path to the output file in the project root
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(project_root, output_file)
+
+    # Empty the output file if it exists
+    with open(output_path, 'w', encoding='utf-8') as outfile:
+        # Loop through all HTML files in the input directory
+        for file_name in os.listdir(input_dir):
+            if file_name.endswith('.html'):
+                file_path = os.path.join(input_dir, file_name)
+                # Read the content of the current HTML file
+                with open(file_path, 'r', encoding='utf-8') as infile:
+                    outfile.write(infile.read())
+                    # Append three new lines after each file's content
+                    outfile.write('\n\n\n')
+
+    print(f"All files have been concatenated into {output_path}")
+
+def clear_output_files(url_file='urls.txt', output_dir='output-soups'):
+    # Delete the URL file if it exists
+    if os.path.exists(url_file):
+        os.remove(url_file)
+        print(f"Deleted {url_file}")
+    else:
+        print(f"{url_file} does not exist.")
+
+    # Clear out the output-soups directory
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+        os.makedirs(output_dir)  # Recreate the empty directory
+        print(f"Cleared all files in {output_dir}")
+    else:
+        print(f"{output_dir} directory does not exist.")
+
+def process_title_and_urls(driver, title, urls):
+    output_dir = os.path.join('output-soups', sanitize_filename(title))
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Process the URLs
+    process_urls(driver, urls, output_dir, 128)
+
+    # Concatenate the HTML files
+    concatenate_html_files(output_dir, output_file=f"{title}.html")
+
+    # Move the concatenated file to the title's directory
+    # shutil.move(f"{title} Help Docs Concat.html", output_dir)
+
 # Main function to control the flow of the script
-def main(url, output_dir='output-soups'):
+def main(output_dir='output-soups'):
     driver = setup_driver()
-    pages = []
-    url_list = []
+
+    items = [
+        # {"title": "Experience Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.networks_overview.htm&type=5"},
+        # {"title": "Identity and Access", "url": "https://help.salesforce.com/s/articleView?id=sf.identity_overview.htm&type=5"},
+        # {"title": "Extend with Clicks", "url": "https://help.salesforce.com/s/articleView?id=sf.extend_click_intro.htm&type=5"},
+        # {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
+        {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
+    ]
 
     try:
-        if (not check_for_url_file()):
-            # Fetch the page and process it
-            page_content = fetch_page(driver, url)
-            pages.append(page_content)
+        for item in items:
+            title = item['title']
+            url = item['url']
+            print(f"Processing {title}...")
 
-            urls = extract_urls_from_toc(page_content)
-            urls = clean_urls(urls)
-            url_list.extend(urls)
-            save_urls(url_list)
-        else:
-            url_list = load_urls_from_file()
+            # Clear output-soups directory before processing
+            # clear_output_files(output_dir='output-soups')
 
-        process_urls(driver, url_list, output_dir, 2, 350)
+            # Fetch the base page and get all urls from toc
+            # urls = extract_urls_from_toc(driver, url)
+            # urls = clean_urls(urls)
+            # save_urls(urls)
+            urls = load_urls_from_file()
+
+            # Process the title and URLs
+            process_title_and_urls(driver, title, urls)
+            print(f"Completed processing for {title}\n")
 
     finally:
         driver.quit()  # Ensure the driver is closed properly
 
-    return url_list
-
 # Run the script
 if __name__ == "__main__":
-    url = 'https://help.salesforce.com/s/articleView?id=sf.psc_admin_concept_psc_welcom.htm'
-    main(url)
+    main()
