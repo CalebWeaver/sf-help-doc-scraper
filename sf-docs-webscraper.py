@@ -54,18 +54,19 @@ def load_page_with_retry(driver, url, by, value):
     time.sleep(2)
     checkCount = 0
     content_div = None
-    while checkCount <= 4 and not content_div:
+    while True:
         content_div = check_for_element(driver, by, value)
-        checkCount += 1
 
         if content_div:
             print(f"Div with {by} '{value}' found.")
             return content_div
-        elif not content_div and checkCount <= 3:
-            print(f"Div with {by} '{value}' not found. Attempt {checkCount} of 3.")
+        elif not content_div and checkCount <= 4:
+            checkCount += 1
+            print(f"Div with {by} '{value}' not found. Attempt {checkCount} of 5.")
             time.sleep(1)
         else:
             print(f"Div with {by} '{value}' not found. Abandoned.")
+            return
 
 def sanitize_filename(name):
     # Remove or replace characters that are not allowed in filenames
@@ -164,7 +165,7 @@ def process_title_and_urls(driver, title, urls):
     os.makedirs(output_dir, exist_ok=True)
 
     # Process the URLs
-    process_urls(driver, urls, output_dir, 128)
+    process_urls(driver, urls, output_dir, 292)
 
     # Concatenate the HTML files
     concatenate_html_files(output_dir, output_file=f"{title}.html")
