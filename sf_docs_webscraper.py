@@ -10,6 +10,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+# TODO: Make this work for developer docs too like this https://developer.salesforce.com/docs/atlas.en-us.industries_reference.meta/industries_reference/salesforce_industries_dev_guide.htm
+
 # Set up the Selenium WebDriver with options
 def setup_driver(headless=True):
     chrome_options = Options()
@@ -18,23 +20,13 @@ def setup_driver(headless=True):
     return webdriver.Chrome(options=chrome_options)
 
 def get_toc_from_url(driver, url):
-    return load_page_with_retry(driver, url, 'class', 'table-of-content')
+    return load_page_with_retry(driver, url, 'ul', 'class', 'tree')
 
-# Function to parse the page content and extract the Table of Contents URLs
-def extract_urls_from_toc(driver, url):
-    toc = get_toc_from_url(driver, url)
-    if toc:
-        urls = [a['href'] for a in toc.find_all('a', href=True)]
-        print(f"Found {len(urls)} URLs in Table of Contents.")
-        return urls
-    else:
-        print("Table of Contents not found.")
-        return []
-
-# Function to recursively build the JSON structure
+# Function to recursively build the JSON structure as indicated by the table of contents
 def build_content_structure(help_doc_dir, ul_element):
     toc_structure = []
-    for li in ul_element.find_all('li'):
+    print(f"toc ul_element: {ul_element}")
+    for li in ul_element.find_all('li', recursive=False):
         title = li.get('title')
 
         # Find the <a> tag to extract the link
@@ -80,29 +72,30 @@ def clean_urls(url_list):
     print(f"Cleaned URLs: {len(cleaned_urls)} valid URLs found.")
     return cleaned_urls
 
-def check_for_element(driver, by, value):
+def check_for_element(driver, element_type='div', by='class', value=None):
+    # Searches for an element of a specified type with a given attribute.
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     search_kwargs = {by: value}
-    div = soup.find('div', **search_kwargs)
-    return div
+    element = soup.find(element_type, **search_kwargs)
+    return element
 
-def load_page_with_retry(driver, url, by, value):
+def load_page_with_retry(driver, url, element, by, value):
     driver.get(url)
     time.sleep(5)
     checkCount = 0
     content_div = None
     while True:
-        content_div = check_for_element(driver, by, value)
+        content_div = check_for_element(driver, element, by, value)
 
         if content_div:
-            print(f"Div with {by} '{value}' found.")
+            print(f"{element} with {by} '{value}' found.")
             return content_div
         elif not content_div and checkCount <= 4:
             checkCount += 1
-            print(f"Div with {by} '{value}' not found. Attempt {checkCount} of 5.")
+            print(f"{element} with {by} '{value}' not found. Attempt {checkCount} of 5.")
             time.sleep(1)
         else:
-            print(f"Div with {by} '{value}' not found. Abandoned.")
+            print(f"{element} with {by} '{value}' not found. Abandoned.")
             return
 
 def sanitize_filename(name):
@@ -140,7 +133,7 @@ def process_toc_urls(driver, toc_content, output_dir, start_index=0, end_index=N
         title = toc_node['title']
         print(f"Processing URL {i + 1}/{end_index} of {len(url_list)} total: {url}")
 
-        contentSoup = load_page_with_retry(driver, url, 'id', 'content')
+        contentSoup = load_page_with_retry(driver, url, 'div', 'id', 'content')
 
         if contentSoup:
             # Save the soup content to file
@@ -241,7 +234,7 @@ def main(output_dir='output-soups'):
         # {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
         # {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
         # {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
-        {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
+        # {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
     ]
 
     try:

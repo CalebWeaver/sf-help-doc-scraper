@@ -1,91 +1,114 @@
-Here's a basic README file that you can use for your project. It covers the key aspects of your script, including its purpose, how to set it up, and how to run it.
+Here is the README in Markdown format:
 
----
+Salesforce Documentation Web Scraper
 
-# Salesforce Documentation Web Scraper
+The Salesforce Documentation Web Scraper (sf_docs_webscraper.py) is a Python script that uses BeautifulSoup and Selenium to automate the process of scraping, organizing, and transforming Salesforce help documentation into JSON and HTML formats. It retrieves structured data from Table of Contents (TOC) pages, processes and saves content into organized files, and generates minified JSON files suitable for further analysis or use in web applications.
 
-This project is a Python-based web scraper designed to extract and save content from Salesforce documentation pages. It uses Selenium for web page interaction and BeautifulSoup for HTML parsing. The scraper fetches URLs from the table of contents of a specified Salesforce documentation page, processes them, and saves the relevant content to HTML files.
+Features
 
-## Features
+	•	Automated Web Scraping: Navigates through Salesforce documentation pages, extracts Table of Contents (TOC) URLs, and processes individual pages.
+	•	HTML Processing: Cleans and saves HTML content for each document.
+	•	JSON Structuring: Builds and saves a nested JSON structure representing each TOC, with options for minified JSON.
+	•	Data Transformation: Converts HTML content into JSON-compatible text using html_to_json_minifier.
+	•	Efficient Saving: Saves progress and structure at intervals to avoid re-scraping on subsequent runs.
+	•	Concatenated HTML Export: Combines all scraped HTML files into a single concatenated HTML file for easy viewing.
 
-- **URL Extraction:** Extracts URLs from the Table of Contents (TOC) of a Salesforce documentation page.
-- **Content Extraction:** Fetches the content from each URL and extracts the main content (`div` with `id="content"`).
-- **File Saving:** Saves the extracted content as individual HTML files, using the `<h1>` tag of the content as the filename.
-- **Incremental Processing:** Processes and saves each page's content immediately, improving memory efficiency and providing real-time progress.
+Requirements
 
-## Requirements
+	•	Python 3.6+
+	•	Selenium
+	•	BeautifulSoup (bs4)
+	•	Google Chrome and ChromeDriver
 
-- Python 3.x
-- `requests`
-- `beautifulsoup4`
-- `pandas`
-- `selenium`
-- Chrome WebDriver (matching your installed version of Chrome)
+Install the required packages using pip:
 
-## Installation
+pip install beautifulsoup4 selenium
 
-1. **Clone the repository:**
+Setup
 
-   ```bash
-   git clone https://github.com/yourusername/sf-docs-webscraper.git
-   cd sf-docs-webscraper
-   ```
+	1.	Download ChromeDriver: Ensure ChromeDriver is in your PATH. It should match your Chrome version.
+	2.	Configure Directories: The script will save files in organized directories under Help Doc Output/{title} Help Docs.
 
-2. **Install dependencies:**
+Usage
 
-   You can install the required Python packages using `pip`:
+	1.	Run the Script: Execute the main script to start scraping:
 
-   ```bash
-   pip install requests beautifulsoup4 pandas selenium
-   ```
+python sf_docs_webscraper.py
 
-3. **Set up ChromeDriver:**
 
-   Make sure you have [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/downloads) installed and that it matches your version of Chrome. Add the `chromedriver` executable to your system's PATH.
+	2.	Specify Groups in the Main Function: Define the list of groups (documentation sections) in the groups list within the main function. Each group requires a title and url.
+	3.	Headless Mode: The script uses Chrome in headless mode by default. To disable headless mode, modify the setup_driver function:
 
-## Usage
+def setup_driver(headless=True):
+    chrome_options = Options()
+    # Remove or comment out this line to disable headless mode
+    chrome_options.add_argument('--headless')
+    return webdriver.Chrome(options=chrome_options)
 
-1. **Run the Script:**
 
-   To scrape a Salesforce documentation page, navigate to the project directory and run the following command:
 
-   ```bash
-   python sf-docs-webscraper.py
-   ```
+Key Functions
 
-   By default, the script starts processing the URLs found on the Salesforce documentation page specified in the code.
+setup_driver(headless=True)
 
-2. **Customizing the URL Range:**
+Sets up and returns the Selenium ChromeDriver with optional headless mode.
 
-   You can customize the range of URLs processed by modifying the `start_index` and `end_index` parameters in the `main()` function call within the script:
+get_toc_from_url(driver, url)
 
-   ```python
-   process_urls(driver, url_list, output_dir, start_index=2, end_index=350)
-   ```
+Navigates to a TOC page, retrieves the main TOC element, and parses it with BeautifulSoup.
 
-3. **Output:**
+extract_urls_from_toc(driver, url)
 
-   - The extracted content will be saved as HTML files in the `output-soups` directory.
-   - The filenames are derived from the `<h1>` tag in the content. If no `<h1>` tag is found, a fallback filename is used.
+Extracts all URLs from a TOC page and returns them as a list.
 
-4. **Saving URLs:**
+build_content_structure(help_doc_dir, ul_element)
 
-   The script saves all the URLs it processes to a file named `urls.txt`. If the file exists, the script will load the URLs from this file instead of fetching them again.
+Recursively builds a structured JSON representation of the TOC, including title, link, and children nodes.
 
-## Troubleshooting
+process_toc_urls(driver, toc_content, output_dir, start_index=0, end_index=None)
 
-- **ChromeDriver Issues:** Ensure that ChromeDriver is installed and correctly added to your PATH. The version of ChromeDriver must match the version of Chrome installed on your machine.
-- **Missing Content:** If the script fails to find the content (`div` with `id="content"`), ensure that the Salesforce documentation page structure has not changed.
-- **File Overwrites:** The script sanitizes filenames to avoid illegal characters. However, if multiple pages have the same `<h1>` content, files may be overwritten. Consider manually checking for unique filenames if this occurs.
+Processes each URL in the TOC, loading page content, saving it to a structured JSON file, and updating content as it processes.
 
-## Contributing
+minify_toc_structure(toc_structure)
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any bugs or suggestions.
+Recursively removes unnecessary fields (e.g., link) and converts HTML content into a compact JSON-friendly structure.
 
-## License
+concatenate_html_files(group_title, input_dir, output_path)
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+Concatenates individual HTML files into a single file for each documentation group.
 
----
+Example Directory Structure
 
-Feel free to customize this README to better fit your project's needs, especially the sections about installation, usage, and contributing.
+Help Doc Output/
+├── Service Cloud Help Docs/
+│   ├── Help Doc Pages/
+│   │   ├── Customize Support Settings.html
+│   │   ├── Set Business Hours.html
+│   ├── toc_structure.json
+│   ├── toc_structure_strip.json
+│   └── toc_structure_min.json
+
+Configuration Options
+
+	•	Headless Mode: Toggle in setup_driver.
+	•	Output Directories: Modify in the main function as needed.
+	•	Save Frequency: The script saves after processing every 5 URLs. Adjust in process_toc_urls as needed.
+
+Additional Notes
+
+	•	Error Handling: The script includes retry logic for loading pages. Modify time.sleep() values for faster retries.
+	•	Minified JSON: For minimized file size, the script can create both indented and compact JSON files.
+	•	Custom Transformation: The script uses html_to_json_minifier to strip and convert HTML content. Ensure this module is configured for your specific transformation needs.
+
+Example Code for Executing the Script
+
+The following command starts the script and processes all specified groups in headless mode:
+
+python sf_docs_webscraper.py
+
+This will generate both detailed and minified JSON files for each group, along with a concatenated HTML file, all saved under Help Doc Output.
+
+License
+
+This project is for educational purposes and internal use only, especially if scraping documentation from sites like Salesforce. Please review Salesforce’s Terms of Service and scraping policies before running this tool in production.
+

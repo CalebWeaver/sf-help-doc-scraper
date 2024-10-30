@@ -45,7 +45,8 @@ def main():
         # {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
         # {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
         # {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
-        {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
+        # {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
+        {"title": "Industries Developer Guide", "url": "https://developer.salesforce.com/docs/atlas.en-us.industries_reference.meta/industries_reference/salesforce_industries_dev_guide.htm"},
     ]
     # Read your HTML files and convert them
     html_file_path = 'Help Doc Output/Omnistudio Help Docs.html'
