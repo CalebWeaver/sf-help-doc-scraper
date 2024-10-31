@@ -220,6 +220,10 @@ def minify_toc_structure(toc_structure):
 
     return new_structure
 
+def format_title(title_string):
+    title_string = title_string.lower().replace(" ", "_")
+    return title_string
+
 # Main function to control the flow of the script
 def main(output_dir='output-soups'):
     driver = setup_driver()
@@ -227,13 +231,13 @@ def main(output_dir='output-soups'):
     groups = [
         # {"title": "Sales Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.sales_core.htm&type=5"},
         # {"title": "Service Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.service_cloud.htm&type=5"},
-        # {"title": "PSS", "url": "https://help.salesforce.com/s/articleView?id=sf.psc_admin_concept_psc_welcom.htm&type=5"},
-        # {"title": "Experience Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.networks_overview.htm&type=5"},
-        # {"title": "Identity and Access", "url": "https://help.salesforce.com/s/articleView?id=sf.identity_overview.htm&type=5"},
-        # {"title": "Extend with Clicks", "url": "https://help.salesforce.com/s/articleView?id=sf.extend_click_intro.htm&type=5"},
-        # {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
-        # {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
-        # {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
+        {"title": "PSS", "url": "https://help.salesforce.com/s/articleView?id=sf.psc_admin_concept_psc_welcom.htm&type=5"},
+        {"title": "Experience Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.networks_overview.htm&type=5"},
+        {"title": "Identity and Access", "url": "https://help.salesforce.com/s/articleView?id=sf.identity_overview.htm&type=5"},
+        {"title": "Extend with Clicks", "url": "https://help.salesforce.com/s/articleView?id=sf.extend_click_intro.htm&type=5"},
+        {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
+        {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
+        {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
         # {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
     ]
 
@@ -267,7 +271,7 @@ def main(output_dir='output-soups'):
 
             strip_toc_structure = minify_toc_structure(toc_structure)
             save_json_to_file(strip_toc_structure, help_doc_dir, "toc_structure_strip.json")
-            save_json_to_min_file(strip_toc_structure, help_doc_dir, "toc_structure_min.json")
+            save_json_to_min_file(strip_toc_structure, help_doc_dir, format_title(group['title']) + "_toc_structure_min.json")
 
             # Concatenate the HTML files
             concatenate_html_files(title, os.path.join(help_doc_dir, "Help Doc Pages"), help_doc_dir)
