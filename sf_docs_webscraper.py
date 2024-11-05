@@ -224,22 +224,55 @@ def format_title(title_string):
     title_string = title_string.lower().replace(" ", "_")
     return title_string
 
+import os
+import json
+
+def count_links_in_toc_structure(toc_directory):
+    #Counts the total number of links in all TOC structures within the specified directory.
+    total_links = 0
+
+    # Traverse the TOC directory to find all JSON files
+    for root, dirs, files in os.walk(toc_directory):
+        for file_name in files:
+            if file_name.endswith('toc_structure.json'):
+                file_path = os.path.join(root, file_name)
+                with open(file_path, 'r', encoding='utf-8') as toc_file:
+                    toc_structure = json.load(toc_file)
+                    # Recursively count links in the current TOC structure
+                    total_links += count_links_in_structure(toc_structure)
+
+    print(f"Total links found across all TOC structures: {total_links}")
+    return total_links
+
+def count_links_in_structure(toc_structure):
+    #Recursively counts links in a single TOC structure.
+    link_count = 0
+
+    for node in toc_structure:
+        # Count the link if it exists
+        if 'link' in node and node['link']:
+            link_count += 1
+        # Recursively count links in the children
+        if 'children' in node:
+            link_count += count_links_in_structure(node['children'])
+
+    return link_count
+
+def count_links():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    link_total = 0
+
+    for group in groups:
+        help_doc_dir = os.path.join(current_dir, "Help Doc Output", f"{group['title']} Help Docs")
+        link_count = count_links_in_toc_structure(help_doc_dir)
+        link_total += link_count
+        print(f"{group['title']}: {link_count}")
+
+    print(f"Total: {link_total}")
+
 # Main function to control the flow of the script
 def main(output_dir='output-soups'):
     driver = setup_driver()
-
-    groups = [
-        # {"title": "Sales Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.sales_core.htm&type=5"},
-        # {"title": "Service Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.service_cloud.htm&type=5"},
-        {"title": "PSS", "url": "https://help.salesforce.com/s/articleView?id=sf.psc_admin_concept_psc_welcom.htm&type=5"},
-        {"title": "Experience Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.networks_overview.htm&type=5"},
-        {"title": "Identity and Access", "url": "https://help.salesforce.com/s/articleView?id=sf.identity_overview.htm&type=5"},
-        {"title": "Extend with Clicks", "url": "https://help.salesforce.com/s/articleView?id=sf.extend_click_intro.htm&type=5"},
-        {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
-        {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
-        {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
-        # {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
-    ]
 
     try:
         for group in groups:
@@ -280,7 +313,22 @@ def main(output_dir='output-soups'):
     finally:
         driver.quit()  # Ensure the driver is closed properly
 
+# Update links as needed, add more groups, remove groups that don't need run
+groups = [
+    {"title": "Sales Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.sales_core.htm&type=5"},
+    {"title": "Service Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.service_cloud.htm&type=5"},
+    {"title": "PSS", "url": "https://help.salesforce.com/s/articleView?id=sf.psc_admin_concept_psc_welcom.htm&type=5"},
+    {"title": "Experience Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.networks_overview.htm&type=5"},
+    {"title": "Identity and Access", "url": "https://help.salesforce.com/s/articleView?id=sf.identity_overview.htm&type=5"},
+    {"title": "Extend with Clicks", "url": "https://help.salesforce.com/s/articleView?id=sf.extend_click_intro.htm&type=5"},
+    {"title": "Industries Common Components", "url": "https://help.salesforce.com/s/articleView?id=sf.industries_common_features.htm&type=5"},
+    {"title": "Data Cloud", "url": "https://help.salesforce.com/s/articleView?id=sf.c360_a_data_cloud.htm&type=5"},
+    {"title": "Winter 25", "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=216&type=5"},
+    {"title": "Omnistudio", "url": "https://help.salesforce.com/s/articleView?id=sf.os_omnistudio_standard.htm&type=5"},
+]
+
 # Run the script
 if __name__ == "__main__":
     main()
-
+    # Just here to output in case you're curious how many links are used.
+    count_links()
